@@ -54,10 +54,12 @@ sleep_seconds_after_api_call = 1
 
 api_key = None
 
+#提取api key
 with open(os.path.join(os.environ['HOME'],
                        '.guardian-open-platform-key')) as fp:
     api_key = fp.read().strip()
 
+#后缀
 def ordinal_suffix(n):
     if n == 1:
         return "st"
@@ -66,17 +68,21 @@ def ordinal_suffix(n):
     else:
         return "th"
 
+#日期
 today_date = date.today()
 today = str(today_date)
 day = today_date.day
 today_long = today_date.strftime("%A the {0}{1} of %B, %Y").format(day,ordinal_suffix(day))
+
+#创建当天mobi的目录
 check_call(['mkdir','-p',today])
 os.chdir(today)
 
+#是否是星期天
 sunday = (date.today().isoweekday() == 7)
 
 # Set up various variable that we need below:
-
+#标题
 paper = "The Observer" if sunday else "The Guardian"
 book_id = "Guardian_"+today
 book_title = paper + " on "+today_long
@@ -85,7 +91,7 @@ book_basename = "guardian-"+today
 
 # ========================================================================
 # Now draw the cover image:
-
+#封面
 cover_image_basename = "cover-image"
 cover_image_filename_png = cover_image_basename + ".png"
 cover_image_filename = cover_image_basename + ".gif"
@@ -96,6 +102,7 @@ h = 800
 
 top_offset = 100
 
+#调用系统命令
 def backticks(command):
     p = Popen(command,stdout=PIPE)
     c = p.communicate()
@@ -104,13 +111,14 @@ def backticks(command):
     else:
         return c[0]
 
+#字体信息
 font_filename = backticks(['fc-match','-f','%{file}','Helvetica'])
 if not font_filename:
     print "Failed to find a font matching Helvetica"
     sys.exit(1)
 
 # Use the Python Imaging Library (PIL) to draw a simple cover image:
-
+#画封面
 im = Image.new("L",(w,h),"white")
 
 logo_filename = os.path.join(
@@ -144,18 +152,23 @@ for line in subtitle:
 im.save(cover_image_filename)
 
 # Convert the logo to GIF to use as the masthead:
+#logo放在报头
 im = Image.open(logo_filename)
 im.save(masthead_filename)
 
+
+#=====================================================
+#有api key生成url地址
 def make_item_url(item_id):
     return 'http://content.guardianapis.com/{i}?format=xml&show-fields=all&show-editors-picks=true&show-most-viewed=true&api-key={k}'.format( i=item_id, k=api_key)
 
+#得到RSS feeds
 def url_to_element_tree(url):
-    h = sha1(url.encode('UTF-8')).hexdigest()
+    h = sha1(url.encode('UTF-8')).hexdigest()#生成md5
     filename = h+".xml"
     if not os.path.exists(filename):
         try:
-            text = urlopen(url).read()
+            text = urlopen(url).read()#得到内容
         except HTTPError, e:
             if e.code == 403:
                 raise Exception, "The API return 403: is your API key correct?"
@@ -185,7 +198,7 @@ today_filename = 'today.html'
 with open(today_filename,"w") as fp:
     fp.write(today_page)
 
-html_parser = etree.HTMLParser()
+html_parser = etree.HTMLParser()#解析
 
 filename_to_headline = {}
 filename_to_description = {}
@@ -194,6 +207,7 @@ filename_to_paper_part = {}
 
 files = []
 
+#得到正文
 def strip_html(s):
     if s:
         return unicode(lxml.html.fromstring(s).text_content())
